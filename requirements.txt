@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+sqlalchemy[asyncio]
+asyncpg
+aioredis
+aiohttp
+pydantic
+pytest
+pytest-asyncio
