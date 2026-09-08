@@ -1,6 +1,6 @@
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
-import aioredis
+import redis.asyncio as aioredis
 import json
 from app.core.config import settings
 from pathlib import Path
@@ -48,9 +48,17 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
         if not res:
             return Response(json.dumps({"error": "duplicate_in_flight"}), status_code=409, media_type="application/json")
 
-        response: Response = await call_next(request)
-        body = b""
-        async for chunk in response.body_iterator:
-            body += chunk
-        await self.redis.set(key, body.decode('utf-8'), ex=self.ttl)
-        return Response(body, status_code=response.status_code, media_type=response.media_type)
+        try:
+            response: Response = await call_next(request)
+            body = b""
+            async for chunk in response.body_iterator:
+                body += chunk
+            await self.redis.set(key, body.decode('utf-8'), ex=self.ttl)
+            return Response(body, status_code=response.status_code, media_type=response.media_type)
+        except Exception:
+            # If the request handler raises, remove the inflight marker so clients can retry
+            try:
+                await self.redis.delete(key)
+            except Exception:
+                pass
+            raise

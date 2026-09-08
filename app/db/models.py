@@ -13,6 +13,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 import datetime
+import os
 
 Base = declarative_base()
 
@@ -32,9 +33,8 @@ class LedgerEntry(Base):
     currency = Column(String(8), nullable=False)
     amount = Column(Numeric, nullable=False)  # positive for credit, negative for debit convention
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    metadata = Column(JSON, nullable=True)
+    entry_metadata = Column("metadata", JSON, nullable=True)
     tx_id = Column(String, nullable=False, index=True)
-
 
 class OutboxEvent(Base):
     __tablename__ = "outbox_events"
@@ -63,6 +63,7 @@ def get_engine(url=None):
 def get_session(url=None):
     global _async_session
     if _async_session is None:
+        url = url or os.getenv("DATABASE_URL")
         engine = get_engine(url)
         _async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     return _async_session

@@ -1,6 +1,6 @@
 from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi import Request, Response
-import aioredis
+import redis.asyncio as aioredis
 from pathlib import Path
 import time
 import json

@@ -8,6 +8,7 @@ app = FastAPI()
 
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(IdempotencyMiddleware)
+app.include_router(api_router)
 
 @app.get("/health")
 def health():

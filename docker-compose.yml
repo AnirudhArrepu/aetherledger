@@ -1,4 +1,4 @@
-version: '3.8'
+﻿version: "3.8"
 
 services:
   api:
@@ -7,7 +7,7 @@ services:
     working_dir: /app
     volumes:
       - ./:/app
-    command: sh -c "pip install --no-cache-dir -r requirements.txt && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    command: sh -c "pip install --no-cache-dir -r requirements.txt && alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
     ports:
       - "8000:8000"
     environment:
@@ -23,7 +23,7 @@ services:
     working_dir: /app
     volumes:
       - ./:/app
-    command: sh -c "pip install --no-cache-dir -r requirements.txt && python -m app.outbox.worker"
+    command: sh -c "pip install --no-cache-dir -r requirements.txt && alembic upgrade head && python -m app.outbox.worker"
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/aetherledger
       - REDIS_URL=redis://redis:6379/0
