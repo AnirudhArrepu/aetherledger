@@ -34,29 +34,29 @@ async def process_transaction(entries: List[TransactionEntry], base_currency: st
                 async with s.begin():
                     await s.execute(text("SET LOCAL TRANSACTION ISOLATION LEVEL SERIALIZABLE"))
 
-                    # enforce overdraft limits per-account BEFORE inserting entries
-                    # lock account rows to avoid lost-update races; rely on SERIALIZABLE + retries for safety
-                    affected_accounts = sorted({int(e.account_id) for e in entries})
-                    account_limits = {}
-                    for aid in affected_accounts:
-                        q = await s.execute(text("SELECT id, overdraft_limit FROM accounts WHERE id = :aid FOR UPDATE"), {"aid": aid})
-                        acc_row = q.first()
-                        if not acc_row:
-                            raise ValueError(f"account {aid} not found")
-                        account_limits[aid] = acc_row.overdraft_limit or 0
+                    # # enforce overdraft limits per-account BEFORE inserting entries
+                    # # lock account rows to avoid lost-update races; rely on SERIALIZABLE + retries for safety
+                    # affected_accounts = sorted({int(e.account_id) for e in entries})
+                    # account_limits = {}
+                    # for aid in affected_accounts:
+                    #     q = await s.execute(text("SELECT id, overdraft_limit FROM accounts WHERE id = :aid FOR UPDATE"), {"aid": aid})
+                    #     acc_row = q.first()
+                    #     if not acc_row:
+                    #         raise ValueError(f"account {aid} not found")
+                    #     account_limits[aid] = acc_row.overdraft_limit or 0
 
-                    # compute current balances and check post-transaction balances
-                    for aid in affected_accounts:
-                        q2 = await s.execute(text("SELECT COALESCE(SUM(amount),0) AS balance FROM ledger_entries WHERE account_id = :aid"), {"aid": aid})
-                        row = q2.first()
-                        current_balance = row.balance or 0
-                        # compute delta from this transaction for this account
-                        delta = sum((e.amount for e in entries if int(e.account_id) == aid))
-                        new_balance = current_balance + delta
-                        overdraft_limit = account_limits[aid]
-                        # overdraft_limit is amount allowed to go negative (e.g., 0 means no overdraft)
-                        if new_balance < -overdraft_limit:
-                            raise ValueError(f"would overdraft account {aid}")
+                    # # compute current balances and check post-transaction balances
+                    # for aid in affected_accounts:
+                    #     q2 = await s.execute(text("SELECT COALESCE(SUM(amount),0) AS balance FROM ledger_entries WHERE account_id = :aid"), {"aid": aid})
+                    #     row = q2.first()
+                    #     current_balance = row.balance or 0
+                    #     # compute delta from this transaction for this account
+                    #     delta = sum((e.amount for e in entries if int(e.account_id) == aid))
+                    #     new_balance = current_balance + delta
+                    #     overdraft_limit = account_limits[aid]
+                    #     # overdraft_limit is amount allowed to go negative (e.g., 0 means no overdraft)
+                    #     if new_balance < -overdraft_limit:
+                    #         raise ValueError(f"would overdraft account {aid}")
 
                     # insert ledger entries
                     for e in entries:
